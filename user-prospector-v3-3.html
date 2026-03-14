@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Prospector v3 — AI লিড ফাইন্ডার</title>
+<link href="https://fonts.googleapis.com/css2?family=Tiro+Bangla:ital@0;1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0c10;--surface:#111318;--surface2:#181c24;--border:#1f2733;--accent:#00e5a0;--accent2:#0080ff;--accent3:#ff6b35;--text:#e8edf5;--muted:#5a6478;--danger:#ff4757;--warn:#ffa502;--ai:#667eea;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:100;background:rgba(10,12,16,.96);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:58px;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.logo-text{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:2px;text-transform:uppercase;}
+.logo-sub{font-size:10px;color:var(--muted);font-family:'Tiro Bangla',serif;}
+.logo-version{font-size:9px;background:linear-gradient(135deg,rgba(102,126,234,.2),rgba(0,229,160,.2));color:var(--accent);padding:2px 7px;border-radius:4px;margin-left:6px;border:1px solid rgba(0,229,160,.2);}
+.header-right{display:flex;align-items:center;gap:8px;}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.status-text{font-size:11px;color:var(--muted);}
+
+/* BACK BUTTON */
+.back-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Tiro Bangla',serif;font-size:12px;cursor:pointer;transition:all .2s;margin-bottom:14px;}
+.back-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,229,160,.06);}
+.back-btn .back-arrow{font-size:14px;line-height:1;}
+
+/* DASHBOARD ICON in HEADER */
+.dash-icon-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all .2s;position:relative;}
+.dash-icon-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,229,160,.08);box-shadow:0 0 10px rgba(0,229,160,.2);}
+.dash-icon-btn .tooltip{position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:10px;white-space:nowrap;font-family:'Tiro Bangla',serif;color:var(--text);opacity:0;pointer-events:none;transition:opacity .2s;}
+.dash-icon-btn:hover .tooltip{opacity:1;}
+
+/* PAGE HEADER ROW */
+.page-header-row{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.page-header-row .page-header{margin-bottom:0;flex:1;}
+
+/* REMINDER BANNER */
+.reminder-banner{position:relative;z-index:1;background:linear-gradient(90deg,rgba(255,165,2,.12),rgba(255,107,53,.08));border-bottom:1px solid rgba(255,165,2,.2);padding:8px 20px;display:none;align-items:center;gap:12px;font-family:'Tiro Bangla',serif;font-size:13px;}
+.reminder-banner.show{display:flex;}
+.rb-text{flex:1;color:var(--warn);}
+.rb-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;}
+
+/* LAYOUT */
+.app{position:relative;z-index:1;display:grid;grid-template-columns:215px 1fr;min-height:calc(100vh - 58px);}
+
+/* SIDEBAR */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:14px 0;overflow-y:auto;}
+.nav-section{padding:0 10px;margin-bottom:18px;}
+.nav-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;padding:0 8px;margin-bottom:5px;}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:all .2s;font-size:12px;color:var(--muted);border:1px solid transparent;font-family:'Tiro Bangla',serif;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:rgba(0,229,160,.08);color:var(--accent);border-color:rgba(0,229,160,.2);}
+.nav-item .icon{font-size:13px;width:16px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--accent);color:var(--bg);font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;font-family:'Space Mono';}
+.nav-badge.warn{background:var(--warn);}
+.nav-badge.ai-badge{background:var(--ai);}
+
+/* API BAR */
+.api-bar{margin:0 10px 14px;padding:10px 12px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.15);border-radius:10px;}
+.api-bar-label{font-size:10px;color:var(--accent);margin-bottom:5px;font-family:'Tiro Bangla',serif;}
+.api-bar input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:10px;outline:none;font-family:'Space Mono';}
+.api-bar input:focus{border-color:var(--accent);}
+
+/* MAIN */
+.main{padding:20px;overflow-y:auto;}
+.page-header{margin-bottom:18px;}
+.page-title{font-family:'Tiro Bangla',serif;font-size:22px;margin-bottom:3px;}
+.page-desc{font-family:'Tiro Bangla',serif;font-size:12px;color:var(--muted);}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;position:relative;overflow:hidden;transition:border-color .2s;}
+.stat-card:hover{border-color:rgba(0,229,160,.3);}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.green::before{background:linear-gradient(90deg,var(--accent),transparent);}
+.stat-card.blue::before{background:linear-gradient(90deg,var(--accent2),transparent);}
+.stat-card.orange::before{background:linear-gradient(90deg,var(--accent3),transparent);}
+.stat-card.purple::before{background:linear-gradient(90deg,var(--ai),transparent);}
+.stat-label{font-family:'Tiro Bangla',serif;font-size:11px;color:var(--muted);margin-bottom:5px;}
+.stat-value{font-size:26px;font-weight:700;line-height:1;margin-bottom:4px;}
+.stat-value.green{color:var(--accent);}
+.stat-value.blue{color:var(--accent2);}
+.stat-value.orange{color:var(--accent3);}
+.stat-value.ai{color:var(--ai);}
+.stat-change{font-size:10px;color:var(--muted);}
+
+/* TWO COL */
+.two-col{display:grid;grid-template-columns:1fr 310px;gap:14px;}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.card-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.card-title{font-family:'Tiro Bangla',serif;font-size:14px;font-weight:600;}
+
+/* FILTER BAR */
+.filter-bar{padding:10px 14px;display:flex;gap:8px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.search-wrap{flex:1;min-width:130px;position:relative;}
+.search-wrap input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 10px 7px 28px;color:var(--text);font-family:'Tiro Bangla',serif;font-size:12px;outline:none;transition:border-color .2s;}
+.search-wrap input:focus{border-color:var(--accent);}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;}
+.filter-select{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:'Tiro Bangla',serif;font-size:12px;outline:none;cursor:pointer;}
+
+/* BUTTONS */
+.btn{padding:7px 12px;border-radius:8px;font-size:12px;font-family:'Tiro Bangla',serif;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;gap:5px;}
+.btn-primary{background:var(--accent);color:var(--bg);font-weight:700;}
+.btn-primary:hover{background:#00ffb3;box-shadow:0 0 14px rgba(0,229,160,.4);}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm{padding:5px 9px;font-size:11px;}
+.btn-ai{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;}
+.btn-ai:hover{opacity:.9;box-shadow:0 0 14px rgba(102,126,234,.4);}
+.btn-wa{background:#25d366;color:#fff;}
+.btn-wa:hover{background:#1ebe5d;}
+.btn-tg{background:#0088cc;color:#fff;}
+.btn-tg:hover{background:#0077b5;}
+.btn-danger{background:rgba(255,71,87,.15);color:var(--danger);border:1px solid rgba(255,71,87,.3);}
+.btn-danger:hover{background:rgba(255,71,87,.25);}
+
+/* TABLE */
+.leads-table{width:100%;border-collapse:collapse;}
+.leads-table th{padding:9px 12px;text-align:left;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border);font-family:'Space Mono';}
+.leads-table td{padding:10px 12px;border-bottom:1px solid rgba(31,39,51,.5);font-size:12px;vertical-align:middle;}
+.leads-table tr:last-child td{border-bottom:none;}
+.leads-table tr:hover td{background:rgba(0,229,160,.025);}
+.lead-name{display:flex;align-items:center;gap:8px;}
+.avatar{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.lead-name-text{font-family:'Tiro Bangla',serif;font-size:13px;}
+.lead-handle{font-size:10px;color:var(--muted);}
+.platform{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;}
+.platform.fb{background:rgba(24,119,242,.15);color:#1877f2;}
+.platform.yt{background:rgba(255,0,0,.12);color:#f00;}
+.platform.tg{background:rgba(0,136,204,.15);color:#0088cc;}
+.platform.ig{background:rgba(225,48,108,.12);color:#e1306c;}
+.platform.tt{background:rgba(105,201,208,.12);color:#69c9d0;}
+.status{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:4px;font-size:10px;font-family:'Tiro Bangla',serif;}
+.status-dot2{width:5px;height:5px;border-radius:50%;}
+.status.new{background:rgba(0,229,160,.1);color:var(--accent);}
+.status.new .status-dot2{background:var(--accent);}
+.status.contacted{background:rgba(0,128,255,.1);color:var(--accent2);}
+.status.contacted .status-dot2{background:var(--accent2);}
+.status.interested{background:rgba(255,107,53,.1);color:var(--accent3);}
+.status.interested .status-dot2{background:var(--accent3);}
+.status.converted{background:rgba(255,165,2,.1);color:var(--warn);}
+.status.converted .status-dot2{background:var(--warn);}
+.score-wrap{display:flex;align-items:center;gap:6px;}
+.score-bar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;max-width:50px;}
+.score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent2),var(--accent));}
+.score-num{font-size:10px;color:var(--muted);}
+.action-btns{display:flex;gap:3px;flex-wrap:wrap;}
+.icon-btn{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .2s;}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,229,160,.08);}
+.icon-btn.wa:hover{border-color:#25d366;color:#25d366;background:rgba(37,211,102,.08);}
+.reminder-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;font-size:9px;background:rgba(255,165,2,.12);color:var(--warn);font-family:'Tiro Bangla',serif;}
+.reminder-tag.overdue{background:rgba(255,71,87,.12);color:var(--danger);}
+
+/* RIGHT PANEL */
+.platform-stats{padding:12px 14px;}
+.platform-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.platform-row:last-child{margin-bottom:0;}
+.platform-label{width:70px;font-family:'Tiro Bangla',serif;font-size:11px;color:var(--muted);flex-shrink:0;}
+.platform-bar-wrap{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.platform-bar-fill{height:100%;border-radius:3px;}
+.platform-count{font-size:11px;color:var(--text);width:22px;text-align:right;}
+.activity-feed{padding:12px 14px;}
+.activity-item{display:flex;gap:10px;margin-bottom:12px;position:relative;}
+.activity-item:not(:last-child)::before{content:'';position:absolute;left:13px;top:26px;bottom:-4px;width:1px;background:var(--border);}
+.activity-icon{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+.activity-text{font-family:'Tiro Bangla',serif;font-size:12px;line-height:1.4;margin-bottom:2px;}
+.activity-time{font-size:10px;color:var(--muted);}
+.chart-area{padding:12px 14px;height:86px;}
+svg.chart{width:100%;height:100%;}
+
+/* ============ AI FINDER SECTION ============ */
+.finder-section{margin-bottom:18px;}
+.finder-card{background:var(--surface);border:1px solid rgba(102,126,234,.3);border-radius:14px;overflow:hidden;position:relative;}
+.finder-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at top left,rgba(102,126,234,.05),transparent 60%);pointer-events:none;}
+.finder-header{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid rgba(102,126,234,.15);}
+.finder-title{font-family:'Tiro Bangla',serif;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.finder-title .ai-chip{font-size:9px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:2px 8px;border-radius:10px;font-family:'Space Mono';letter-spacing:.5px;}
+.finder-body{padding:16px 18px;}
+
+/* TABS */
+.finder-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.finder-tab{padding:6px 14px;border-radius:8px;font-size:12px;font-family:'Tiro Bangla',serif;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .2s;}
+.finder-tab.active{background:rgba(102,126,234,.15);color:var(--ai);border-color:rgba(102,126,234,.35);}
+.finder-tab:hover{color:var(--text);border-color:var(--text);}
+
+/* INPUT AREA */
+.input-area{position:relative;margin-bottom:12px;}
+.input-area textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Tiro Bangla',serif;font-size:13px;outline:none;resize:vertical;min-height:120px;line-height:1.6;transition:border-color .2s;}
+.input-area textarea:focus{border-color:rgba(102,126,234,.5);}
+.input-area textarea::placeholder{color:var(--muted);}
+.char-counter{position:absolute;bottom:10px;right:12px;font-size:10px;color:var(--muted);}
+
+.finder-options{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.option-group{display:flex;align-items:center;gap:6px;font-family:'Tiro Bangla',serif;font-size:12px;color:var(--muted);}
+.option-group select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-family:'Tiro Bangla',serif;font-size:12px;outline:none;}
+
+/* ANALYZE BTN */
+.analyze-btn{width:100%;padding:12px;border-radius:10px;font-size:14px;font-family:'Tiro Bangla',serif;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;}
+.analyze-btn:hover:not(:disabled){opacity:.9;box-shadow:0 4px 20px rgba(102,126,234,.4);transform:translateY(-1px);}
+.analyze-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.analyze-btn.loading{animation:shimmer 1.5s infinite;}
+@keyframes shimmer{0%,100%{opacity:.8}50%{opacity:.5}}
+
+/* RESULTS */
+.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.results-title{font-family:'Tiro Bangla',serif;font-size:13px;font-weight:600;color:var(--text);}
+.results-count{font-size:11px;color:var(--muted);}
+
+.prospect-list{display:flex;flex-direction:column;gap:10px;}
+.prospect-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 14px;transition:border-color .2s;}
+.prospect-card:hover{border-color:rgba(102,126,234,.3);}
+.prospect-card.high{border-left:3px solid var(--accent);}
+.prospect-card.medium{border-left:3px solid var(--warn);}
+.prospect-card.low{border-left:3px solid var(--muted);}
+.prospect-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;}
+.prospect-name{font-family:'Tiro Bangla',serif;font-size:13px;font-weight:600;color:var(--text);}
+.prospect-handle{font-size:11px;color:var(--muted);margin-top:1px;}
+.prospect-score-badge{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.score-ring{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid;}
+.score-ring.high{border-color:var(--accent);color:var(--accent);background:rgba(0,229,160,.08);}
+.score-ring.medium{border-color:var(--warn);color:var(--warn);background:rgba(255,165,2,.08);}
+.score-ring.low{border-color:var(--muted);color:var(--muted);}
+.prospect-reason{font-family:'Tiro Bangla',serif;font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px;}
+.prospect-comment{font-family:'Tiro Bangla',serif;font-size:11px;color:var(--text);background:rgba(0,229,160,.04);border:1px solid rgba(0,229,160,.1);border-radius:6px;padding:7px 10px;line-height:1.5;margin-bottom:10px;font-style:italic;}
+.prospect-actions{display:flex;gap:6px;flex-wrap:wrap;}
+
+/* HOW TO USE GUIDE */
+.how-to{background:rgba(102,126,234,.05);border:1px solid rgba(102,126,234,.15);border-radius:10px;padding:14px;margin-bottom:14px;}
+.how-to-title{font-family:'Tiro Bangla',serif;font-size:12px;color:var(--ai);font-weight:600;margin-bottom:8px;}
+.how-to-steps{display:flex;flex-direction:column;gap:6px;}
+.how-step{display:flex;gap:8px;font-family:'Tiro Bangla',serif;font-size:12px;color:var(--muted);line-height:1.4;}
+.step-num{width:18px;height:18px;border-radius:50%;background:rgba(102,126,234,.2);color:var(--ai);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Space Mono';}
+
+/* SAMPLE PASTE */
+.sample-btn{font-size:11px;font-family:'Tiro Bangla',serif;color:var(--ai);background:rgba(102,126,234,.1);border:1px solid rgba(102,126,234,.2);padding:4px 10px;border-radius:5px;cursor:pointer;transition:all .2s;}
+.sample-btn:hover{background:rgba(102,126,234,.2);}
+
+/* ====== MODALS ====== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);z-index:200;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:500px;max-width:96vw;max-height:90vh;overflow-y:auto;animation:slideUp .3s ease;}
+.modal-lg{width:620px;}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{padding:15px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1;}
+.modal-title{font-family:'Tiro Bangla',serif;font-size:15px;font-weight:600;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;transition:color .2s;}
+.modal-close:hover{color:var(--text);}
+.modal-body{padding:16px 18px;}
+.modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+.form-group{margin-bottom:12px;}
+.form-label{display:block;font-family:'Tiro Bangla',serif;font-size:12px;color:var(--muted);margin-bottom:5px;}
+.form-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 11px;color:var(--text);font-family:'Tiro Bangla',serif;font-size:13px;outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--accent);}
+textarea.form-input{resize:vertical;min-height:70px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* AI MESSAGE MODAL */
+.ai-output-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px;font-family:'Tiro Bangla',serif;font-size:13px;line-height:1.7;color:var(--text);min-height:90px;white-space:pre-wrap;}
+.ai-output-box.loading{color:var(--muted);font-style:italic;}
+.ai-tabs{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap;}
+.ai-tab{padding:5px 11px;border-radius:6px;font-size:11px;font-family:'Tiro Bangla',serif;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .2s;}
+.ai-tab.active{background:rgba(102,126,234,.15);color:var(--ai);border-color:rgba(102,126,234,.3);}
+
+/* REMINDER MODAL */
+.reminder-list{display:flex;flex-direction:column;gap:8px;}
+.reminder-item{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+.reminder-item.overdue{border-color:rgba(255,71,87,.3);background:rgba(255,71,87,.05);}
+.reminder-item.today{border-color:rgba(255,165,2,.3);background:rgba(255,165,2,.05);}
+.reminder-info{flex:1;}
+.reminder-name{font-family:'Tiro Bangla',serif;font-size:13px;}
+.reminder-time{font-size:11px;color:var(--muted);margin-top:2px;}
+.reminder-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;transition:color .2s;}
+.reminder-del:hover{color:var(--danger);}
+
+/* CONTACT MODAL */
+.contact-link-row{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;margin-bottom:8px;}
+.contact-link-info{flex:1;}
+.contact-link-platform{font-size:11px;color:var(--muted);margin-bottom:2px;}
+.contact-link-url{font-size:12px;color:var(--accent);word-break:break-all;}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:8px;font-family:'Tiro Bangla',serif;font-size:13px;color:var(--text);box-shadow:0 0 20px rgba(0,229,160,.2);transform:translateY(80px);opacity:0;transition:all .3s;z-index:400;}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* EMPTY STATE */
+.empty-state{padding:32px;text-align:center;color:var(--muted);font-family:'Tiro Bangla',serif;font-size:13px;}
+.empty-icon{font-size:32px;margin-bottom:8px;}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* SETUP SCREEN */
+.setup-screen{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;}
+.setup-box{background:var(--surface);border:1px solid rgba(0,229,160,.3);border-radius:20px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 0 40px rgba(0,229,160,.1);}
+.setup-logo-icon{width:56px;height:56px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px;}
+.setup-title{font-family:'Tiro Bangla',serif;font-size:18px;color:var(--text);text-align:center;margin-bottom:5px;}
+.setup-desc{font-family:'Tiro Bangla',serif;font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px;line-height:1.6;}
+.setup-steps{background:var(--surface2);border-radius:10px;padding:12px 14px;margin-bottom:16px;}
+.setup-step{display:flex;gap:9px;margin-bottom:9px;font-family:'Tiro Bangla',serif;font-size:12px;color:var(--muted);line-height:1.5;}
+.setup-step:last-child{margin-bottom:0;}
+.setup-snum{width:18px;height:18px;border-radius:50%;background:rgba(0,229,160,.15);color:var(--accent);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.setup-input-label{font-family:'Tiro Bangla',serif;font-size:12px;color:var(--accent);margin-bottom:6px;display:block;}
+.setup-input{width:100%;background:var(--surface2);border:2px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Space Mono';font-size:12px;outline:none;transition:border-color .2s;margin-bottom:12px;}
+.setup-input:focus{border-color:var(--accent);}
+.setup-btn{width:100%;padding:13px;border-radius:10px;background:var(--accent);color:var(--bg);font-family:'Tiro Bangla',serif;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .2s;}
+.setup-btn:hover{background:#00ffb3;box-shadow:0 0 20px rgba(0,229,160,.4);}
+.setup-error{background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.3);border-radius:8px;padding:9px 12px;font-family:'Tiro Bangla',serif;font-size:12px;color:var(--danger);margin-bottom:10px;display:none;}
+.setup-link{text-align:center;margin-top:12px;font-family:'Tiro Bangla',serif;font-size:11px;color:var(--muted);}
+.setup-link a{color:var(--accent);text-decoration:none;}
+
+/* HAMBURGER BUTTON */
+.hamburger-btn{
+  width:40px;height:40px;border-radius:10px;
+  border:1px solid var(--border);background:var(--surface);
+  color:var(--text);cursor:pointer;
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  transition:all .2s;flex-shrink:0;position:relative;z-index:201;
+}
+.hamburger-btn:hover{border-color:var(--accent);background:rgba(0,229,160,.08);}
+.hamburger-btn span{display:block;width:18px;height:2px;background:currentColor;border-radius:2px;transition:all .3s;}
+.hamburger-btn.open{border-color:var(--accent);color:var(--accent);}
+.hamburger-btn.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.hamburger-btn.open span:nth-child(2){opacity:0;}
+.hamburger-btn.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+
+/* HAMBURGER DROPDOWN MENU */
+.hb-menu{
+  position:fixed;top:58px;left:0;right:0;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  z-index:190;transform:translateY(-110%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 8px 30px rgba(0,0,0,.5);
+  padding:16px;
+}
+.hb-menu.open{transform:translateY(0);}
+
+.hb-menu-title{
+  font-family:'Tiro Bangla',serif;font-size:11px;color:var(--muted);
+  letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;
+}
+
+/* API KEY SECTION inside menu */
+.hb-api-section{
+  background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.2);
+  border-radius:12px;padding:14px;margin-bottom:14px;
+}
+.hb-api-label{
+  font-family:'Tiro Bangla',serif;font-size:13px;color:var(--accent);
+  font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px;
+}
+.hb-api-desc{font-family:'Tiro Bangla',serif;font-size:11px;color:var(--muted);margin-bottom:10px;}
+.hb-api-input-row{display:flex;gap:8px;}
+.hb-api-input{
+  flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:10px 12px;color:var(--text);font-family:'Space Mono';font-size:12px;outline:none;
+  transition:border-color .2s;
+}
+.hb-api-input:focus{border-color:var(--accent);}
+.hb-api-submit{
+  padding:10px 16px;border-radius:8px;background:var(--accent);color:var(--bg);
+  font-family:'Tiro Bangla',serif;font-size:13px;font-weight:700;border:none;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.hb-api-submit:hover{background:#00ffb3;box-shadow:0 0 14px rgba(0,229,160,.4);}
+.hb-api-status{
+  margin-top:8px;font-family:'Tiro Bangla',serif;font-size:12px;
+  display:none;align-items:center;gap:6px;
+}
+.hb-api-status.show{display:flex;}
+.hb-api-status.ok{color:var(--accent);}
+.hb-api-status.empty{color:var(--warn);}
+
+/* MENU GRID */
+.hb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+.hb-item{
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s;
+  font-family:'Tiro Bangla',serif;
+}
+.hb-item:hover{border-color:var(--accent);background:rgba(0,229,160,.06);}
+.hb-item .hb-icon{font-size:20px;margin-bottom:5px;}
+.hb-item .hb-label{font-size:11px;color:var(--muted);}
+.hb-item:hover .hb-label{color:var(--accent);}
+.hb-item .hb-badge{
+  display:inline-block;background:var(--accent);color:var(--bg);
+  font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;
+  font-family:'Space Mono';margin-top:2px;
+}
+.hb-item .hb-badge.warn{background:var(--warn);}
+
+/* SIDEBAR OVERLAY (mobile) */
+.sidebar-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+  z-index:185;
+}
+.sidebar-overlay.show{display:block;}
+
+@media(max-width:900px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .two-col{grid-template-columns:1fr;}
+  .app{grid-template-columns:1fr;}
+  .sidebar{display:none!important;}
+  .hamburger-btn{display:flex;}
+  .status-text{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== FIRST TIME SETUP SCREEN ===== -->
+<div class="setup-screen" id="setupScreen">
+  <div class="setup-box">
+    <div class="setup-logo-icon">🎯</div>
+    <div class="setup-title">User Prospector-এ স্বাগতম!</div>
+    <div class="setup-desc">শুরু করতে একবার Claude API Key দিন।<br>এটি ফাইলে সংরক্ষিত হবে — আর কখনো চাইবে না।</div>
+
+    <div class="setup-steps">
+      <div class="setup-step"><div class="setup-snum">১</div><div><strong style="color:var(--text);">console.anthropic.com</strong> — এই সাইটে যান</div></div>
+      <div class="setup-step"><div class="setup-snum">২</div><div>লগইন → <strong style="color:var(--text);">API Keys</strong> → <strong style="color:var(--text);">Create Key</strong></div></div>
+      <div class="setup-step"><div class="setup-snum">৩</div><div>Key কপি করে নিচে পেস্ট করুন (<strong style="color:var(--accent);">sk-ant-</strong> দিয়ে শুরু)</div></div>
+    </div>
+
+    <label class="setup-input-label">🔑 আপনার Claude API Key</label>
+    <input type="password" class="setup-input" id="setupKeyInput" placeholder="sk-ant-api03-...">
+    <div class="setup-error" id="setupError"></div>
+    <button class="setup-btn" onclick="completeSetup()">✓ সেভ করুন ও শুরু করুন</button>
+
+    <div class="setup-link">
+      আগে থেকে Key আছে? <a href="#" onclick="skipSetup()">এড়িয়ে যান</a>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="logo">
+      <div class="logo-icon">🎯</div>
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="logo-text">PROSPECTOR</div>
+          <span class="logo-version">v3 AI</span>
+        </div>
+        <div class="logo-sub">Facebook AI লিড ফাইন্ডার</div>
+      </div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-dot"></div>
+    <span class="status-text">AI সক্রিয়</span>
+    <button class="dash-icon-btn" onclick="goToDashboard()" title="ড্যাশবোর্ড">
+      📊
+      <span class="tooltip">ড্যাশবোর্ড</span>
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="openReminderModal()">⏰ রিমাইন্ডার</button>
+    <button class="btn btn-primary" onclick="openAddModal()">+ নতুন লিড</button>
+  </div>
+</header>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeHbMenu()"></div>
+
+<!-- HAMBURGER DROPDOWN MENU -->
+<div class="hb-menu" id="hbMenu">
+
+  <!-- API KEY SECTION -->
+  <div class="hb-api-section">
+    <div class="hb-api-label">🤖 Claude API Key</div>
+    <div class="hb-api-desc">AI ফিচার ব্যবহার করতে একবার দিন — সেভ হয়ে থাকবে</div>
+    <div class="hb-api-input-row">
+      <input type="password" class="hb-api-input" id="hbApiInput" placeholder="sk-ant-api03-...">
+      <button class="hb-api-submit" onclick="submitApiKey()">✓ সেভ করুন</button>
+    </div>
+    <div class="hb-api-status" id="hbApiStatus"></div>
+  </div>
+
+  <!-- MENU GRID -->
+  <div class="hb-menu-title">মেনু</div>
+  <div class="hb-grid">
+    <div class="hb-item" onclick="hbGo('dashboard')">
+      <div class="hb-icon">📊</div>
+      <div class="hb-label">ড্যাশবোর্ড</div>
+    </div>
+    <div class="hb-item" onclick="hbGo('finder')">
+      <div class="hb-icon">🔍</div>
+      <div class="hb-label">AI ফাইন্ডার</div>
+      <div class="hb-badge">NEW</div>
+    </div>
+    <div class="hb-item" onclick="openAddModal();closeHbMenu()">
+      <div class="hb-icon">➕</div>
+      <div class="hb-label">নতুন লিড</div>
+    </div>
+    <div class="hb-item" onclick="openReminderModal();closeHbMenu()">
+      <div class="hb-icon">⏰</div>
+      <div class="hb-label">রিমাইন্ডার</div>
+      <div class="hb-badge warn" id="hbReminderBadge" style="display:none;">0</div>
+    </div>
+    <div class="hb-item" onclick="exportCSV();closeHbMenu()">
+      <div class="hb-icon">📤</div>
+      <div class="hb-label">CSV এক্সপোর্ট</div>
+    </div>
+    <div class="hb-item" onclick="closeHbMenu()">
+      <div class="hb-icon">✕</div>
+      <div class="hb-label">বন্ধ করুন</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="reminder-banner" id="reminderBanner">
+  <span class="rb-icon">⏰</span>
+  <span class="rb-text" id="reminderBannerText"></span>
+  <button class="rb-close" onclick="document.getElementById('reminderBanner').classList.remove('show')">✕</button>
+</div>
+
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="api-bar">
+    <div class="api-bar-label">🤖 Claude API Key</div>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-..." oninput="saveApiKey(this.value)">
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">মেনু</div>
+    <div class="nav-item active" onclick="setNav(this);showSection('dashboard')"><span class="icon">📊</span> ড্যাশবোর্ড</div>
+    <div class="nav-item" onclick="setNav(this);showSection('finder')"><span class="icon">🔍</span> AI লিড ফাইন্ডার <span class="nav-badge ai-badge">NEW</span></div>
+    <div class="nav-item" onclick="setNav(this);showSection('dashboard')"><span class="icon">👥</span> সব লিড <span class="nav-badge" id="totalBadge">0</span></div>
+    <div class="nav-item" onclick="setNav(this);showSection('dashboard')"><span class="icon">⚡</span> নতুন <span class="nav-badge" id="newBadge">0</span></div>
+    <div class="nav-item" onclick="setNav(this);showSection('dashboard')"><span class="icon">🔥</span> আগ্রহী</div>
+    <div class="nav-item" onclick="setNav(this);showSection('dashboard')"><span class="icon">✅</span> কনভার্টেড</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">টুলস</div>
+    <div class="nav-item" onclick="openReminderModal()"><span class="icon">⏰</span> রিমাইন্ডার <span class="nav-badge warn" id="reminderBadge" style="display:none">0</span></div>
+    <div class="nav-item" onclick="exportCSV()"><span class="icon">📤</span> CSV এক্সপোর্ট</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">সোর্স</div>
+    <div class="nav-item" onclick="setNav(this)"><span class="icon">📘</span> Facebook</div>
+    <div class="nav-item" onclick="setNav(this)"><span class="icon">📺</span> YouTube</div>
+    <div class="nav-item" onclick="setNav(this)"><span class="icon">✈️</span> Telegram</div>
+    <div class="nav-item" onclick="setNav(this)"><span class="icon">📸</span> Instagram</div>
+    <div class="nav-item" onclick="setNav(this)"><span class="icon">🎵</span> TikTok</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ===== DASHBOARD SECTION ===== -->
+  <div id="section-dashboard">
+    <div class="page-header">
+      <div class="page-title">লিড ড্যাশবোর্ড</div>
+      <div class="page-desc">অনলাইন ইনকামে আগ্রহী প্রার্থীদের ট্র্যাক ও পরিচালনা করুন</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card green"><div class="stat-label">মোট লিড</div><div class="stat-value green" id="statTotal">0</div><div class="stat-change">সংগৃহীত</div></div>
+      <div class="stat-card blue"><div class="stat-label">নতুন</div><div class="stat-value blue" id="statNew">0</div><div class="stat-change">যোগাযোগ বাকি</div></div>
+      <div class="stat-card orange"><div class="stat-label">আগ্রহী</div><div class="stat-value orange" id="statInterested">0</div><div class="stat-change">ফলোআপ দরকার</div></div>
+      <div class="stat-card purple"><div class="stat-label">AI দিয়ে পাওয়া</div><div class="stat-value ai" id="statAI">0</div><div class="stat-change">স্বয়ংক্রিয় বিশ্লেষণ</div></div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">লিড ডেটাবেস</div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-ai btn-sm" onclick="setNav(document.querySelectorAll('.nav-item')[1]);showSection('finder')">🔍 AI ফাইন্ডার</button>
+            <button class="btn btn-outline btn-sm" onclick="exportCSV()">📥 CSV</button>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" placeholder="নাম খুঁজুন..." id="searchInput" oninput="filterLeads()"></div>
+          <select class="filter-select" id="platformFilter" onchange="filterLeads()">
+            <option value="">সব প্ল্যাটফর্ম</option>
+            <option>Facebook</option><option>YouTube</option><option>Telegram</option><option>Instagram</option><option>TikTok</option>
+          </select>
+          <select class="filter-select" id="statusFilter" onchange="filterLeads()">
+            <option value="">সব স্ট্যাটাস</option>
+            <option value="new">নতুন</option><option value="contacted">যোগাযোগ করা</option>
+            <option value="interested">আগ্রহী</option><option value="converted">কনভার্টেড</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="leads-table">
+            <thead><tr><th>নাম</th><th>প্ল্যাটফর্ম</th><th>স্ট্যাটাস</th><th>স্কোর</th><th>রিমাইন্ডার</th><th>অ্যাকশন</th></tr></thead>
+            <tbody id="leadsBody"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="empty-state" style="display:none;"><div class="empty-icon">📋</div>এখনো কোনো লিড নেই।<br>উপরে "+ নতুন লিড" বা 🔍 AI ফাইন্ডার ব্যবহার করুন।</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:13px;">
+        <div class="card"><div class="card-header"><div class="card-title">প্ল্যাটফর্ম</div></div><div class="platform-stats" id="platformStats"><div style="color:var(--muted);font-family:'Tiro Bangla',serif;font-size:12px;">কোনো ডেটা নেই</div></div></div>
+        <div class="card"><div class="card-header"><div class="card-title">স্ট্যাটাস</div></div><div class="chart-area"><svg class="chart" id="miniChart" viewBox="0 0 250 72"></svg></div></div>
+        <div class="card"><div class="card-header"><div class="card-title">সাম্প্রতিক</div></div><div class="activity-feed" id="activityFeed"><div style="color:var(--muted);font-family:'Tiro Bangla',serif;font-size:12px;">কোনো কার্যক্রম নেই</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== AI FINDER SECTION ===== -->
+  <div id="section-finder" style="display:none;">
+    <button class="back-btn" onclick="goToDashboard()">
+      <span class="back-arrow">←</span> ড্যাশবোর্ডে ফিরুন
+    </button>
+    <div class="page-header">
+      <div class="page-title">🔍 AI লিড ফাইন্ডার</div>
+      <div class="page-desc">Facebook পোস্ট বা কমেন্ট পেস্ট করুন — AI বিশ্লেষণ করে আগ্রহী মানুষ খুঁজে বের করবে</div>
+    </div>
+
+    <div class="finder-section">
+      <div class="finder-card">
+        <div class="finder-header">
+          <div class="finder-title">
+            📋 পোস্ট / কমেন্ট বিশ্লেষক
+            <span class="ai-chip">AI POWERED</span>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="sample-btn" onclick="loadSample()">📌 স্যাম্পল লোড করুন</button>
+          </div>
+        </div>
+        <div class="finder-body">
+
+          <!-- HOW TO USE -->
+          <div class="how-to">
+            <div class="how-to-title">📖 কীভাবে ব্যবহার করবেন:</div>
+            <div class="how-to-steps">
+              <div class="how-step"><div class="step-num">1</div><div>Facebook গ্রুপে যান (যেমন: "অনলাইন ইনকাম বাংলাদেশ", "ফ্রিল্যান্সিং গ্রুপ")</div></div>
+              <div class="how-step"><div class="step-num">2</div><div>আগ্রহী মনে হওয়া পোস্টের লেখা, কমেন্ট বা মন্তব্য কপি করুন</div></div>
+              <div class="how-step"><div class="step-num">3</div><div>নিচে পেস্ট করুন — একসাথে একাধিক কমেন্ট দিতে পারবেন</div></div>
+              <div class="how-step"><div class="step-num">4</div><div>AI বিশ্লেষণ করে স্কোর ও কারণ সহ আগ্রহী মানুষদের তালিকা দেবে</div></div>
+              <div class="how-step"><div class="step-num">5</div><div>এক ক্লিকে সরাসরি লিড ডেটাবেসে যোগ করুন</div></div>
+            </div>
+          </div>
+
+          <!-- TABS -->
+          <div class="finder-tabs">
+            <button class="finder-tab active" onclick="selectFinderTab(this,'comments')">💬 কমেন্ট বিশ্লেষণ</button>
+            <button class="finder-tab" onclick="selectFinderTab(this,'post')">📝 পোস্ট বিশ্লেষণ</button>
+            <button class="finder-tab" onclick="selectFinderTab(this,'group_scan')">🔎 গ্রুপ স্ক্যান</button>
+          </div>
+
+          <!-- INPUT -->
+          <div class="input-area">
+            <textarea id="finderInput" placeholder="এখানে Facebook কমেন্ট পেস্ট করুন..." oninput="updateCharCount()"></textarea>
+            <div class="char-counter" id="charCounter">0 অক্ষর</div>
+          </div>
+
+          <!-- OPTIONS -->
+          <div class="finder-options">
+            <div class="option-group">
+              <span>সর্বনিম্ন স্কোর:</span>
+              <select id="minScore">
+                <option value="5">৫+ (সব)</option>
+                <option value="6">৬+</option>
+                <option value="7" selected>৭+ (সুপারিশ)</option>
+                <option value="8">৮+ (হাই পোটেনশিয়াল)</option>
+              </select>
+            </div>
+            <div class="option-group">
+              <span>ভাষা:</span>
+              <select id="langSelect">
+                <option value="bn">বাংলা</option>
+                <option value="mixed">বাংলা + ইংরেজি</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ANALYZE BUTTON -->
+          <button class="analyze-btn" id="analyzeBtn" onclick="analyzeWithAI()">
+            <span id="analyzeBtnIcon">🔍</span>
+            <span id="analyzeBtnText">AI দিয়ে বিশ্লেষণ করুন</span>
+          </button>
+
+          <!-- RESULTS -->
+          <div id="finderResults" style="display:none;">
+            <div class="results-header">
+              <div class="results-title">🎯 বিশ্লেষণের ফলাফল</div>
+              <div class="results-count" id="resultsCount"></div>
+            </div>
+            <div class="prospect-list" id="prospectList"></div>
+          </div>
+
+          <div id="finderEmpty" style="display:none;" class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <div>কোনো আগ্রহী প্রার্থী পাওয়া যায়নি।<br>আরও কমেন্ট বা ভিন্ন পোস্ট চেষ্টা করুন।</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- ===== ADD LEAD MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event,'modalOverlay')">
+  <div class="modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="modal-close" onclick="closeModal('modalOverlay')" style="font-size:14px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;color:var(--muted);">← পিছনে</button>
+        <div class="modal-title">নতুন লিড যোগ করুন</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modalOverlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">পুরো নাম *</label><input type="text" class="form-input" id="fName" placeholder="রাহেলা বেগম"></div>
+        <div class="form-group"><label class="form-label">হ্যান্ডেল</label><input type="text" class="form-input" id="fHandle" placeholder="@username"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">প্ল্যাটফর্ম *</label><select class="form-input" id="fPlatform"><option value="">বেছে নিন</option><option>Facebook</option><option>YouTube</option><option>Telegram</option><option>Instagram</option><option>TikTok</option></select></div>
+        <div class="form-group"><label class="form-label">স্ট্যাটাস</label><select class="form-input" id="fStatus"><option value="new">নতুন</option><option value="contacted">যোগাযোগ করা</option><option value="interested">আগ্রহী</option><option value="converted">কনভার্টেড</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">স্কোর (১-১০)</label><input type="number" class="form-input" id="fScore" min="1" max="10" value="5"></div>
+        <div class="form-group"><label class="form-label">ফোন (WhatsApp)</label><input type="text" class="form-input" id="fPhone" placeholder="01XXXXXXXXX"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Telegram</label><input type="text" class="form-input" id="fTelegram" placeholder="@username"></div>
+        <div class="form-group"><label class="form-label">ফলোআপ তারিখ</label><input type="date" class="form-input" id="fReminder"></div>
+      </div>
+      <div class="form-group"><label class="form-label">নোট / কারণ</label><textarea class="form-input" id="fNote" placeholder="আগ্রহের বিষয়, কমেন্ট..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modalOverlay')">বাতিল</button>
+      <button class="btn btn-primary" onclick="addLead()">✓ সংরক্ষণ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== AI MESSAGE MODAL ===== -->
+<div class="modal-overlay" id="aiModalOverlay" onclick="closeModalOutside(event,'aiModalOverlay')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="modal-close" onclick="closeModal('aiModalOverlay')" style="font-size:14px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;color:var(--muted);">← পিছনে</button>
+        <div class="modal-title">🤖 AI মেসেজ টেমপ্লেট</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('aiModalOverlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:rgba(102,126,234,.08);border:1px solid rgba(102,126,234,.2);border-radius:8px;padding:9px 13px;margin-bottom:13px;font-family:'Tiro Bangla',serif;font-size:12px;color:#a0aec0;">
+        লিড: <strong id="aiLeadName" style="color:var(--text);">—</strong> &nbsp;|&nbsp; প্ল্যাটফর্ম: <strong id="aiLeadPlatform" style="color:var(--text);">—</strong> &nbsp;|&nbsp; স্ট্যাটাস: <strong id="aiLeadStatus" style="color:var(--text);">—</strong>
+      </div>
+      <div class="ai-tabs">
+        <button class="ai-tab active" onclick="selectAiType(this,'first_contact')">প্রথম যোগাযোগ</button>
+        <button class="ai-tab" onclick="selectAiType(this,'followup')">ফলোআপ</button>
+        <button class="ai-tab" onclick="selectAiType(this,'rsm_pitch')">RSM LIFE পিচ</button>
+        <button class="ai-tab" onclick="selectAiType(this,'interested_close')">ক্লোজিং</button>
+        <button class="ai-tab" onclick="selectAiType(this,'reminder_nudge')">নাজ মেসেজ</button>
+      </div>
+      <div class="form-group"><label class="form-label">অতিরিক্ত নির্দেশনা</label><input type="text" class="form-input" id="aiExtraNote" placeholder="যেমন: সংক্ষেপে, আনুষ্ঠানিকভাবে..."></div>
+      <button class="btn btn-ai" style="width:100%;justify-content:center;margin-bottom:12px;" onclick="generateAIMessage()">✨ AI দিয়ে মেসেজ তৈরি করুন</button>
+      <div class="ai-output-box" id="aiOutput">এখানে তৈরি মেসেজ দেখাবে...</div>
+      <div style="font-size:10px;color:var(--muted);text-align:right;margin-top:4px;" id="aiCharCount"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('aiModalOverlay')">বন্ধ করুন</button>
+      <button class="btn btn-wa" id="sendWaBtn" style="display:none;" onclick="sendViaWhatsApp()">📱 WhatsApp</button>
+      <button class="btn btn-tg" id="sendTgBtn" style="display:none;" onclick="sendViaTelegram()">✈️ Telegram</button>
+      <button class="btn btn-primary" id="copyAiBtn" style="display:none;" onclick="copyAiMessage()">📋 কপি</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== REMINDER MODAL ===== -->
+<div class="modal-overlay" id="reminderModalOverlay" onclick="closeModalOutside(event,'reminderModalOverlay')">
+  <div class="modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="modal-close" onclick="closeModal('reminderModalOverlay')" style="font-size:14px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;color:var(--muted);">← পিছনে</button>
+        <div class="modal-title">⏰ ফলোআপ রিমাইন্ডার</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('reminderModalOverlay')">✕</button>
+    </div>
+    <div class="modal-body"><div id="reminderList" class="reminder-list"></div></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('reminderModalOverlay')">বন্ধ করুন</button></div>
+  </div>
+</div>
+
+<!-- ===== CONTACT MODAL ===== -->
+<div class="modal-overlay" id="contactModalOverlay" onclick="closeModalOutside(event,'contactModalOverlay')">
+  <div class="modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="modal-close" onclick="closeModal('contactModalOverlay')" style="font-size:14px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;color:var(--muted);">← পিছনে</button>
+        <div class="modal-title">📞 যোগাযোগ করুন</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('contactModalOverlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-family:'Tiro Bangla',serif;font-size:14px;margin-bottom:13px;" id="contactLeadName"></div>
+      <div id="contactLinks"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('contactModalOverlay')">বন্ধ করুন</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span>✅</span><span id="toastMsg"></span></div>
+
+<script>
+// ======= STATE =======
+let leads = JSON.parse(localStorage.getItem('prospector_leads_v3')||'[]');
+let activities = JSON.parse(localStorage.getItem('prospector_activities_v3')||'[]');
+let currentAiLeadId=null, currentAiType='first_contact', currentAiMessage='', currentFinderTab='comments';
+
+const platformConfig={Facebook:{cls:'fb',icon:'📘',color:'#1877f2'},YouTube:{cls:'yt',icon:'📺',color:'#f00'},Telegram:{cls:'tg',icon:'✈️',color:'#0088cc'},Instagram:{cls:'ig',icon:'📸',color:'#e1306c'},TikTok:{cls:'tt',icon:'🎵',color:'#69c9d0'}};
+const statusConfig={new:{label:'নতুন',cls:'new'},contacted:{label:'যোগাযোগ করা',cls:'contacted'},interested:{label:'আগ্রহী',cls:'interested'},converted:{label:'কনভার্টেড',cls:'converted'}};
+const avatarColors=['#00e5a0','#0080ff','#ff6b35','#ffa502','#e1306c','#0088cc'];
+
+function getInitials(n){return n.trim().split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+function getAvatarColor(n){let h=0;for(let c of n)h+=c.charCodeAt(0);return avatarColors[h%avatarColors.length];}
+function formatDate(ts){return new Date(ts).toLocaleDateString('bn-BD',{day:'2-digit',month:'short'});}
+function timeAgo(ts){const d=Date.now()-ts,m=Math.floor(d/60000);if(m<1)return'এইমাত্র';if(m<60)return`${m} মি আগে`;const h=Math.floor(m/60);if(h<24)return`${h} ঘণ্টা আগে`;return`${Math.floor(h/24)} দিন আগে`;}
+function getApiKey(){
+  // Try multiple storage methods
+  try{ const k=localStorage.getItem('prospector_api_key'); if(k)return k; }catch(e){}
+  try{ const k=sessionStorage.getItem('prospector_api_key'); if(k)return k; }catch(e){}
+  return window._embeddedApiKey||'';
+}
+
+function saveApiKey(v){
+  window._embeddedApiKey=v;
+  try{ localStorage.setItem('prospector_api_key',v); }catch(e){}
+  try{ sessionStorage.setItem('prospector_api_key',v); }catch(e){}
+}
+
+// ======= SECTIONS =======
+function showSection(name) {
+  document.getElementById('section-dashboard').style.display = name==='dashboard'?'':'none';
+  document.getElementById('section-finder').style.display = name==='finder'?'':'none';
+  // scroll to top
+  document.querySelector('.main').scrollTo(0,0);
+}
+
+function toggleSidebar(){
+  const menu=document.getElementById('hbMenu');
+  const btn=document.getElementById('hamburgerBtn');
+  const ov=document.getElementById('sidebarOverlay');
+  const isOpen=menu.classList.contains('open');
+  if(isOpen){ closeHbMenu(); }
+  else {
+    menu.classList.add('open');
+    btn.classList.add('open');
+    ov.classList.add('show');
+    // show saved key status
+    const k=getApiKey();
+    const inp=document.getElementById('hbApiInput');
+    const st=document.getElementById('hbApiStatus');
+    if(k){
+      inp.placeholder='✓ সেভ আছে (পরিবর্তন করতে নতুন Key লিখুন)';
+      inp.value='';
+      st.textContent='✅ API Key সেভ আছে — AI ফিচার চালু';
+      st.className='hb-api-status show ok';
+    } else {
+      inp.placeholder='sk-ant-api03-...';
+      inp.value='';
+      st.textContent='⚠️ API Key দেওয়া নেই — AI কাজ করবে না';
+      st.className='hb-api-status show empty';
+    }
+  }
+}
+
+function closeHbMenu(){
+  document.getElementById('hbMenu').classList.remove('open');
+  document.getElementById('hamburgerBtn').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+}
+
+function closeSidebar(){ closeHbMenu(); }
+
+function submitApiKey(){
+  const val=document.getElementById('hbApiInput').value.trim();
+  if(!val){
+    showApiStatus(false,'empty');
+    showToast('API Key লিখুন তারপর সেভ করুন');
+    return;
+  }
+  if(!val.startsWith('sk-ant-')){
+    showApiStatus(false,'empty');
+    showToast('❌ ভুল Key — sk-ant- দিয়ে শুরু হওয়া উচিত');
+    return;
+  }
+  saveApiKey(val);
+  showApiStatus(true);
+  showToast('✅ API Key সেভ হয়েছে! এখন AI ফিচার ব্যবহার করুন।');
+  setTimeout(()=>closeHbMenu(), 1500);
+}
+
+function showApiStatus(saved, type){
+  const el=document.getElementById('hbApiStatus');
+  el.classList.remove('show','ok','empty');
+  if(saved){ el.textContent='✅ API Key সেভ আছে — AI ফিচার চালু'; el.classList.add('show','ok'); }
+  else if(type==='empty'){ el.textContent='⚠️ API Key দিন'; el.classList.add('show','empty'); }
+}
+
+function hbGo(section){
+  showSection(section);
+  goToDashboard();
+  if(section==='finder'){
+    showSection('finder');
+    document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+    document.querySelectorAll('.nav-item')[1]?.classList.add('active');
+  }
+  closeHbMenu();
+  render();
+}
+
+function updateHbReminderBadge(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const due=leads.filter(l=>l.reminder&&new Date(l.reminder)<=today).length;
+  const b=document.getElementById('hbReminderBadge');
+  if(b){ b.textContent=due; b.style.display=due>0?'inline-block':'none'; }
+}
+
+function goToDashboard() {
+  // close any open modals
+  ['modalOverlay','aiModalOverlay','reminderModalOverlay','contactModalOverlay'].forEach(id=>{
+    document.getElementById(id).classList.remove('open');
+  });
+  showSection('dashboard');
+  // update sidebar active
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll('.nav-item')[0].classList.add('active');
+  render();
+}
+
+// ESC key closes modals
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') {
+    ['modalOverlay','aiModalOverlay','reminderModalOverlay','contactModalOverlay'].forEach(id=>{
+      document.getElementById(id).classList.remove('open');
+    });
+  }
+});
+
+// ======= RENDER =======
+function render() {
+  updateStats(); renderTable(); renderPlatformStats(); renderActivity(); renderChart(); updateBadges(); updateReminderBadge(); updateHbReminderBadge();
+}
+
+function updateStats() {
+  const t=leads.length,n=leads.filter(l=>l.status==='new').length;
+  const i=leads.filter(l=>l.status==='interested').length;
+  const c=leads.filter(l=>l.status==='converted').length;
+  const aiFound=leads.filter(l=>l.source==='ai').length;
+  document.getElementById('statTotal').textContent=t;
+  document.getElementById('statNew').textContent=n;
+  document.getElementById('statInterested').textContent=i;
+  document.getElementById('statAI').textContent=aiFound;
+}
+
+function updateBadges() {
+  document.getElementById('totalBadge').textContent=leads.length;
+  document.getElementById('newBadge').textContent=leads.filter(l=>l.status==='new').length;
+}
+
+function updateReminderBadge() {
+  const today=new Date();today.setHours(0,0,0,0);
+  const due=leads.filter(l=>l.reminder&&new Date(l.reminder)<=today).length;
+  const b=document.getElementById('reminderBadge');
+  b.textContent=due; b.style.display=due>0?'':'none';
+}
+
+function renderTable(data) {
+  const list=data!==undefined?data:leads;
+  const tbody=document.getElementById('leadsBody');
+  const empty=document.getElementById('emptyState');
+  if(!list.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const today=new Date();today.setHours(0,0,0,0);
+  tbody.innerHTML=list.slice().reverse().map(l=>{
+    const pc=platformConfig[l.platform]||{cls:'',icon:'🌐',color:'#888'};
+    const sc=statusConfig[l.status]||statusConfig.new;
+    const col=getAvatarColor(l.name);
+    let rHTML='—';
+    if(l.reminder){const rd=new Date(l.reminder);rd.setHours(0,0,0,0);const diff=Math.round((rd-today)/(864e5));if(diff<0)rHTML=`<span class="reminder-tag overdue">🔴 ${Math.abs(diff)}দিন আগে</span>`;else if(diff===0)rHTML=`<span class="reminder-tag">🟡 আজ</span>`;else rHTML=`<span class="reminder-tag">${diff}দিন পরে</span>`;}
+    const aiTag=l.source==='ai'?'<span style="font-size:9px;background:rgba(102,126,234,.15);color:#667eea;padding:1px 5px;border-radius:3px;margin-left:4px;">AI</span>':'';
+    return`<tr><td><div class="lead-name"><div class="avatar" style="background:${col}22;color:${col};">${getInitials(l.name)}</div><div><div class="lead-name-text">${l.name}${aiTag}</div><div class="lead-handle">${l.handle||'—'}</div></div></div></td><td><span class="platform ${pc.cls}">${pc.icon} ${l.platform}</span></td><td><span class="status ${sc.cls}"><span class="status-dot2"></span>${sc.label}</span></td><td><div class="score-wrap"><div class="score-bar"><div class="score-fill" style="width:${l.score*10}%"></div></div><span class="score-num">${l.score}/10</span></div></td><td>${rHTML}</td><td><div class="action-btns"><button class="icon-btn" title="স্ট্যাটাস" onclick="cycleStatus('${l.id}')">🔄</button><button class="icon-btn" title="AI মেসেজ" onclick="openAiModal('${l.id}')">🤖</button><button class="icon-btn wa" title="যোগাযোগ" onclick="openContactModal('${l.id}')">📞</button><button class="icon-btn" title="মুছুন" onclick="deleteLead('${l.id}')">🗑</button></div></td></tr>`;
+  }).join('');
+}
+
+function renderPlatformStats() {
+  const counts={};leads.forEach(l=>{counts[l.platform]=(counts[l.platform]||0)+1;});
+  const max=Math.max(...Object.values(counts),1);
+  const el=document.getElementById('platformStats');
+  if(!Object.keys(counts).length){el.innerHTML='<div style="color:var(--muted);font-family:\'Tiro Bangla\',serif;font-size:12px;">ডেটা নেই</div>';return;}
+  el.innerHTML=Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([p,c])=>{const pc=platformConfig[p]||{color:'#888'};return`<div class="platform-row"><span class="platform-label">${p}</span><div class="platform-bar-wrap"><div class="platform-bar-fill" style="width:${c/max*100}%;background:${pc.color};"></div></div><span class="platform-count">${c}</span></div>`;}).join('');
+}
+
+function renderActivity() {
+  const el=document.getElementById('activityFeed');
+  if(!activities.length){el.innerHTML='<div style="color:var(--muted);font-family:\'Tiro Bangla\',serif;font-size:12px;">কোনো কার্যক্রম নেই</div>';return;}
+  el.innerHTML=activities.slice().reverse().slice(0,6).map(a=>`<div class="activity-item"><div class="activity-icon" style="background:${a.color}18;color:${a.color};">${a.icon}</div><div><div class="activity-text">${a.text}</div><div class="activity-time">${timeAgo(a.ts)}</div></div></div>`).join('');
+}
+
+function renderChart() {
+  const counts={new:0,contacted:0,interested:0,converted:0};leads.forEach(l=>{if(counts[l.status]!==undefined)counts[l.status]++;});
+  const max=Math.max(...Object.values(counts),1);
+  const svg=document.getElementById('miniChart');
+  const W=250,H=72,pad=16,keys=Object.keys(counts),colors=['#00e5a0','#0080ff','#ff6b35','#ffa502'],bw=(W-pad*2)/keys.length;
+  svg.innerHTML=keys.map((k,i)=>{const v=counts[k],bh=v?Math.max(v/max*(H-26),4):3,x=pad+i*bw+bw*.2,y=H-bh-4;return`<rect x="${x}" y="${y}" width="${bw*.6}" height="${bh}" rx="3" fill="${colors[i]}" opacity=".85"/><text x="${x+bw*.3}" y="${H}" text-anchor="middle" font-size="7" fill="#5a6478" font-family="'Tiro Bangla',serif">${statusConfig[k]?.label}</text><text x="${x+bw*.3}" y="${y-3}" text-anchor="middle" font-size="9" fill="${colors[i]}" font-weight="700">${v}</text>`;}).join('');
+}
+
+// ======= FILTER =======
+function filterLeads() {
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const pf=document.getElementById('platformFilter').value;
+  const sf=document.getElementById('statusFilter').value;
+  renderTable(leads.filter(l=>{const mq=!q||l.name.toLowerCase().includes(q)||(l.handle||'').toLowerCase().includes(q);const mp=!pf||l.platform===pf;const ms=!sf||l.status===sf;return mq&&mp&&ms;}));
+}
+
+// ======= LEAD ACTIONS =======
+function addLead(prefill) {
+  const name=(prefill?.name||document.getElementById('fName').value).trim();
+  const platform=prefill?.platform||document.getElementById('fPlatform').value;
+  if(!name||!platform){showToast('নাম ও প্ল্যাটফর্ম দিন');return;}
+  const lead={
+    id:Date.now().toString(),name,platform,
+    handle:prefill?.handle||document.getElementById('fHandle').value.trim(),
+    status:prefill?.status||document.getElementById('fStatus').value,
+    score:prefill?.score||parseInt(document.getElementById('fScore').value)||5,
+    phone:prefill?.phone||document.getElementById('fPhone').value.trim(),
+    telegram:prefill?.telegram||document.getElementById('fTelegram').value.trim(),
+    reminder:prefill?.reminder||document.getElementById('fReminder').value,
+    note:prefill?.note||document.getElementById('fNote').value.trim(),
+    source:prefill?.source||'manual',
+    ts:Date.now()
+  };
+  leads.push(lead);
+  const pc=platformConfig[platform]||{icon:'🌐',color:'#888'};
+  const srcTag=lead.source==='ai'?'🤖 AI দ্বারা পাওয়া':'';
+  addActivity(`${pc.icon} <strong>${name}</strong> — যোগ হয়েছে ${srcTag}`,pc.icon,pc.color);
+  save();render();
+  if(!prefill){closeModal('modalOverlay');clearAddForm();}
+  showToast(`"${name}" লিড ডেটাবেসে যোগ হয়েছে!`);
+  return lead.id;
+}
+
+const statusOrder=['new','contacted','interested','converted'];
+function cycleStatus(id){const l=leads.find(x=>x.id===id);if(!l)return;l.status=statusOrder[(statusOrder.indexOf(l.status)+1)%statusOrder.length];addActivity(`🔄 <strong>${l.name}</strong> → ${statusConfig[l.status].label}`,'🔄','#0080ff');save();render();showToast(`স্ট্যাটাস: ${statusConfig[l.status].label}`);}
+
+function deleteLead(id){const l=leads.find(x=>x.id===id);if(!l)return;if(!confirm(`"${l.name}" মুছে ফেলবেন?`))return;leads=leads.filter(x=>x.id!==id);addActivity(`🗑 <strong>${l.name}</strong> — মুছে ফেলা হয়েছে`,'🗑','#ff4757');save();render();showToast('মুছে ফেলা হয়েছে');}
+
+function addActivity(text,icon,color){activities.push({text,icon,color,ts:Date.now()});if(activities.length>40)activities=activities.slice(-40);}
+
+function save(){localStorage.setItem('prospector_leads_v3',JSON.stringify(leads));localStorage.setItem('prospector_activities_v3',JSON.stringify(activities));}
+
+function exportCSV(){if(!leads.length){showToast('কোনো লিড নেই');return;}const rows=[['নাম','হ্যান্ডেল','প্ল্যাটফর্ম','স্ট্যাটাস','স্কোর','ফোন','Telegram','সোর্স','নোট']];leads.forEach(l=>rows.push([l.name,l.handle||'',l.platform,statusConfig[l.status]?.label||'',l.score,l.phone||'',l.telegram||'',l.source||'manual',l.note||'']));const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));a.download='leads_v3.csv';a.click();}
+
+// ======= AI FINDER =======
+function selectFinderTab(el,tab){document.querySelectorAll('.finder-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');currentFinderTab=tab;}
+
+function updateCharCount(){const v=document.getElementById('finderInput').value;document.getElementById('charCounter').textContent=`${v.length} অক্ষর`;}
+
+function loadSample(){
+  const samples={
+    comments:`রাহেলা বেগম: ভাই আমি ঘরে বসে কাজ করতে চাই, কোনো ভালো সুযোগ আছে? অনেকদিন থেকে খুঁজছি।
+
+মোঃ সাইফুল: পার্টটাইম কিছু করা দরকার। সংসার চালাতে কষ্ট হচ্ছে। মাসে ৫-১০ হাজার হলেও হবে।
+
+তামান্না আক্তার: ভাই অনলাইনে ইনকাম করা কি সত্যিই সম্ভব? নাকি সব স্ক্যাম? ভালো কোনো রাস্তা দেখান।
+
+নাজমুল হাসান: আমি ফ্রিল্যান্সিং শিখতে চাই। কিন্তু কোথা থেকে শুরু করব বুঝতে পারছি না।
+
+শাহিদা: চাকরির পাশাপাশি কিছু একটা করতে চাই। পরিবারকে সাহায্য করতে চাই।
+
+করিম সাহেব: মার্কেটিং কাজে আগ্রহ আছে। নিজের ব্যবসা করতে চাই ভবিষ্যতে।`,
+    post:`আমি আজ শেয়ার করতে চাই কিভাবে ঘরে বসে মাসে ২০-৩০ হাজার টাকা আয় করা সম্ভব। অনেকেই হয়তো জানেন না যে পার্টটাইম নেটওয়ার্ক মার্কেটিং করে অনেকে সফল হয়েছেন। যারা আগ্রহী তারা কমেন্ট করুন।`,
+    group_scan:`গ্রুপ পোস্ট ১:
+রিয়া আক্তার: ভাই আমার স্বামী বেকার, আমি কি অনলাইনে কাজ করতে পারব? শিক্ষাগত যোগ্যতা এইচএসসি।
+
+গ্রুপ পোস্ট ২:
+মনিরুল ইসলাম: কেউ কি আছেন যিনি অনলাইনে ভালো ইনকাম করছেন? আমাকে গাইড করবেন?
+
+গ্রুপ পোস্ট ৩:
+সুমাইয়া: MLM মানে কি শুধু স্ক্যাম? নাকি ভালো কোম্পানিও আছে? জানতে চাই।`
+  };
+  document.getElementById('finderInput').value=samples[currentFinderTab]||samples.comments;
+  updateCharCount();
+}
+
+async function analyzeWithAI() {
+  const apiKey=getApiKey();
+  if(!apiKey){
+    showToast('☰ মেনু খুলুন → API Key সেভ করুন');
+    // flash the hamburger button
+    const btn=document.getElementById('hamburgerBtn');
+    btn.style.boxShadow='0 0 0 3px #ff4757';
+    setTimeout(()=>btn.style.boxShadow='',2000);
+    return;
+  }
+  const text=document.getElementById('finderInput').value.trim();
+  if(!text||text.length<20){showToast('কমপক্ষে একটি কমেন্ট পেস্ট করুন');return;}
+  const minScore=parseInt(document.getElementById('minScore').value)||7;
+
+  const btn=document.getElementById('analyzeBtn');
+  const btnText=document.getElementById('analyzeBtnText');
+  const btnIcon=document.getElementById('analyzeBtnIcon');
+  btn.disabled=true; btn.classList.add('loading');
+  btnIcon.textContent='⏳'; btnText.textContent='AI বিশ্লেষণ করছে...';
+  document.getElementById('finderResults').style.display='none';
+  document.getElementById('finderEmpty').style.display='none';
+
+  const prompt=`তুমি একজন বাংলাদেশী নেটওয়ার্ক মার্কেটিং বিশেষজ্ঞ। RSM LIFE কোম্পানির জন্য Facebook থেকে সম্ভাব্য লিড খুঁজে বের করছ।
+
+নিচে Facebook পোস্ট বা কমেন্টের টেক্সট দেওয়া আছে। প্রতিটি ব্যক্তিকে বিশ্লেষণ করো যারা নিম্নলিখিত বিষয়ে আগ্রহ দেখিয়েছেন:
+- ঘরে বসে আয়
+- অনলাইন ইনকাম
+- পার্টটাইম কাজ
+- ফ্রিল্যান্সিং
+- নেটওয়ার্ক মার্কেটিং / MLM
+- ব্যবসার সুযোগ
+- আর্থিক সমস্যা (পরোক্ষভাবে আগ্রহী হতে পারে)
+
+প্রতিটি সম্ভাব্য লিডের জন্য JSON অবজেক্ট তৈরি করো। শুধু JSON অ্যারে রিটার্ন করো, অন্য কিছু না।
+
+ফরম্যাট:
+[
+  {
+    "name": "ব্যক্তির নাম",
+    "handle": "@handle (যদি থাকে, না থাকলে খালি)",
+    "score": 8,
+    "level": "high/medium/low",
+    "interest": "আগ্রহের সংক্ষিপ্ত বিষয় (বাংলায়)",
+    "reason": "কেন আগ্রহী মনে হচ্ছে (১-২ বাক্য, বাংলায়)",
+    "original_comment": "তার মূল কথাটুকু (সংক্ষেপে)",
+    "platform": "Facebook",
+    "status": "new"
+  }
+]
+
+স্কোরিং নিয়ম:
+- ৮-১০: সরাসরি সুযোগ চাইছেন বা আর্থিক সমস্যা উল্লেখ করেছেন
+- ৬-৭: পরোক্ষ আগ্রহ বা কৌতূহল দেখিয়েছেন
+- ৫ এর নিচে: সামান্য সংযোগ, লিড হিসেবে ধরো না
+
+শুধুমাত্র স্কোর ${minScore}+ যাদের অন্তর্ভুক্ত করো।
+
+Facebook টেক্সট:
+${text}`;
+
+  try {
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await resp.json();
+    if(data.error){showToast('AI ত্রুটি: '+data.error.message);resetAnalyzeBtn();return;}
+
+    let raw=data.content[0].text.trim();
+    // Strip markdown fences
+    raw=raw.replace(/```json|```/g,'').trim();
+    if(!raw.startsWith('['))raw=raw.substring(raw.indexOf('['));
+    if(!raw.endsWith(']'))raw=raw.substring(0,raw.lastIndexOf(']')+1);
+
+    let prospects;
+    try{prospects=JSON.parse(raw);}catch(e){showToast('পার্স ত্রুটি — আবার চেষ্টা করুন');resetAnalyzeBtn();return;}
+
+    addActivity(`🔍 AI বিশ্লেষণ — ${prospects.length}টি সম্ভাব্য লিড পাওয়া গেছে`,'🔍','#667eea');
+    save();
+    displayProspects(prospects);
+  } catch(e) {
+    showToast('❌ সংযোগ ত্রুটি — API Key ঠিক আছে কি?');
+    document.getElementById('analyzeBtn').disabled=false;
+    document.getElementById('analyzeBtn').classList.remove('loading');
+    document.getElementById('analyzeBtnIcon').textContent='🔍';
+    document.getElementById('analyzeBtnText').textContent='AI দিয়ে বিশ্লেষণ করুন';
+  }
+  resetAnalyzeBtn();
+}
+
+function resetAnalyzeBtn(){
+  const btn=document.getElementById('analyzeBtn');
+  btn.disabled=false; btn.classList.remove('loading');
+  document.getElementById('analyzeBtnIcon').textContent='🔍';
+  document.getElementById('analyzeBtnText').textContent='AI দিয়ে বিশ্লেষণ করুন';
+}
+
+function displayProspects(prospects) {
+  if(!prospects.length){document.getElementById('finderEmpty').style.display='block';return;}
+  document.getElementById('finderResults').style.display='block';
+  document.getElementById('resultsCount').textContent=`${prospects.length}টি সম্ভাব্য লিড পাওয়া গেছে`;
+  document.getElementById('prospectList').innerHTML=prospects.map((p,i)=>{
+    const lvl=p.level||'medium';
+    const scoreRingCls=p.score>=8?'high':p.score>=6?'medium':'low';
+    const isAlreadyAdded=leads.some(l=>l.name===p.name);
+    return`<div class="prospect-card ${lvl}" id="prospect-${i}">
+      <div class="prospect-top">
+        <div>
+          <div class="prospect-name">${p.name} ${p.handle?`<span style="color:var(--muted);font-size:11px;">${p.handle}</span>`:''}</div>
+          <div class="prospect-handle" style="margin-top:3px;color:var(--accent3);font-size:11px;">🎯 ${p.interest||'অনলাইন ইনকামে আগ্রহী'}</div>
+        </div>
+        <div class="score-ring ${scoreRingCls}">${p.score}</div>
+      </div>
+      ${p.original_comment?`<div class="prospect-comment">"${p.original_comment}"</div>`:''}
+      <div class="prospect-reason">💡 ${p.reason}</div>
+      <div class="prospect-actions">
+        ${isAlreadyAdded
+          ? `<span style="font-size:11px;color:var(--accent);font-family:'Tiro Bangla',serif;">✅ ইতোমধ্যে যোগ আছে</span>`
+          : `<button class="btn btn-primary btn-sm" onclick="addProspectAsLead(${i},${JSON.stringify(p).replace(/"/g,'&quot;')})">+ লিড হিসেবে যোগ করুন</button>`
+        }
+        <button class="btn btn-ai btn-sm" onclick="openAiModalFromProspect(${JSON.stringify(p).replace(/"/g,'&quot;')})">🤖 মেসেজ তৈরি করুন</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addProspectAsLead(idx, p) {
+  const id=addLead({
+    name:p.name, handle:p.handle||'', platform:p.platform||'Facebook',
+    status:'new', score:p.score||7, phone:'', telegram:'',
+    reminder:'', note:p.reason+' | মূল কমেন্ট: '+p.original_comment,
+    source:'ai'
+  });
+  // Update button
+  const card=document.getElementById(`prospect-${idx}`);
+  if(card){
+    const actions=card.querySelector('.prospect-actions');
+    const addBtn=actions.querySelector('.btn-primary');
+    if(addBtn){addBtn.textContent='✅ যোগ হয়েছে';addBtn.disabled=true;addBtn.style.opacity='.6';}
+  }
+}
+
+function openAiModalFromProspect(p) {
+  // Temporarily create a ghost lead for AI messaging
+  const ghostId='ghost_'+Date.now();
+  const ghost={id:ghostId,name:p.name,platform:p.platform||'Facebook',status:'new',score:p.score||7,phone:'',telegram:'',note:p.reason,source:'ai'};
+  leads.push(ghost);
+  openAiModal(ghostId);
+  // Remove ghost after modal closes
+  setTimeout(()=>{leads=leads.filter(l=>l.id!==ghostId);},60000);
+}
+
+// ======= AI MESSAGE =======
+function openAiModal(id) {
+  currentAiLeadId=id; currentAiMessage='';
+  const l=leads.find(x=>x.id===id);if(!l)return;
+  document.getElementById('aiLeadName').textContent=l.name;
+  document.getElementById('aiLeadPlatform').textContent=l.platform;
+  document.getElementById('aiLeadStatus').textContent=statusConfig[l.status]?.label||'নতুন';
+  document.getElementById('aiOutput').textContent='এখানে তৈরি মেসেজ দেখাবে...';
+  document.getElementById('aiOutput').classList.remove('loading');
+  document.getElementById('aiCharCount').textContent='';
+  document.getElementById('aiExtraNote').value='';
+  ['sendWaBtn','sendTgBtn','copyAiBtn'].forEach(id=>document.getElementById(id).style.display='none');
+  document.querySelectorAll('.ai-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.ai-tab')[0].classList.add('active');
+  currentAiType='first_contact';
+  document.getElementById('aiModalOverlay').classList.add('open');
+}
+
+function selectAiType(el,type){document.querySelectorAll('.ai-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');currentAiType=type;}
+
+async function generateAIMessage(){
+  const apiKey=getApiKey();
+  if(!apiKey){
+    showToast('☰ মেনু খুলুন → API Key সেভ করুন');
+    closeModal('aiModalOverlay');
+    toggleSidebar();
+    return;
+  }
+  const l=leads.find(x=>x.id===currentAiLeadId);if(!l)return;
+  const extra=document.getElementById('aiExtraNote').value.trim();
+  const prompts={
+    first_contact:`তুমি RSM LIFE-এর একজন বাংলাদেশী রিক্রুটার। প্রথমবার যোগাযোগের জন্য বন্ধুত্বপূর্ণ বাংলা মেসেজ লিখ।\nলিড: ${l.name} (${l.platform})\nআগ্রহ: ${l.note||'অনলাইন ইনকাম'}\nমেসেজ ১৫০-২০০ শব্দের মধ্যে, সরাসরি সেল না হয়ে আগ্রহ জাগাবে।${extra?'\n'+extra:''}`,
+    followup:`RSM LIFE ফলোআপ মেসেজ। লিড: ${l.name}, স্ট্যাটাস: ${statusConfig[l.status]?.label}। আগের কথোপকথন মনে করিয়ে নতুন কিছু অফার করো।${extra?'\n'+extra:''}`,
+    rsm_pitch:`RSM LIFE পিচ মেসেজ। লিড: ${l.name}। সুবিধা: ঘরে বসে, পার্টটাইম, হালাল ইনকাম। CTA সহ।${extra?'\n'+extra:''}`,
+    interested_close:`ক্লোজিং মেসেজ। ${l.name} আগ্রহী। সন্দেহ দূর করে এখনই যোগ দিতে উৎসাহিত করো।${extra?'\n'+extra:''}`,
+    reminder_nudge:`হালকা নাজ মেসেজ। ${l.name} রেসপন্স করছেন না। ৮০-১০০ শব্দে মনে করিয়ে দাও।${extra?'\n'+extra:''}`
+  };
+  const box=document.getElementById('aiOutput');
+  box.classList.add('loading');box.textContent='🤖 মেসেজ তৈরি হচ্ছে...';
+  ['sendWaBtn','sendTgBtn','copyAiBtn'].forEach(id=>document.getElementById(id).style.display='none');
+  try {
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,messages:[{role:'user',content:prompts[currentAiType]}]})});
+    const data=await resp.json();
+    if(data.error){box.textContent='❌ '+data.error.message;box.classList.remove('loading');return;}
+    currentAiMessage=data.content[0].text;
+    box.classList.remove('loading');box.textContent=currentAiMessage;
+    document.getElementById('aiCharCount').textContent=`${currentAiMessage.length} অক্ষর`;
+    document.getElementById('copyAiBtn').style.display='';
+    if(l.phone)document.getElementById('sendWaBtn').style.display='';
+    if(l.telegram)document.getElementById('sendTgBtn').style.display='';
+    addActivity(`🤖 <strong>${l.name}</strong> — AI মেসেজ তৈরি`,'🤖','#667eea');save();
+  }catch(e){box.classList.remove('loading');box.textContent='❌ সংযোগ ত্রুটি — ☰ মেনু থেকে API Key চেক করুন।';}
+}
+
+function copyAiMessage(){if(!currentAiMessage)return;navigator.clipboard.writeText(currentAiMessage).then(()=>showToast('কপি হয়েছে!'));}
+
+function sendViaWhatsApp(){const l=leads.find(x=>x.id===currentAiLeadId);if(!l||!l.phone)return;let ph=l.phone.replace(/\D/g,'');if(ph.startsWith('0'))ph='880'+ph.slice(1);window.open(`https://wa.me/${ph}?text=${encodeURIComponent(currentAiMessage)}`,'_blank');addActivity(`📱 <strong>${l.name}</strong> — WhatsApp পাঠানো`,'📱','#25d366');cycleStatusTo(l.id,'contacted');}
+
+function sendViaTelegram(){const l=leads.find(x=>x.id===currentAiLeadId);if(!l||!l.telegram)return;window.open(`https://t.me/${l.telegram.replace('@','')}`,'_blank');addActivity(`✈️ <strong>${l.name}</strong> — Telegram খোলা`,'✈️','#0088cc');}
+
+function cycleStatusTo(id,status){const l=leads.find(x=>x.id===id);if(!l)return;l.status=status;save();render();}
+
+// ======= CONTACT MODAL =======
+function openContactModal(id){
+  const l=leads.find(x=>x.id===id);if(!l)return;
+  document.getElementById('contactLeadName').textContent=l.name;
+  const links=[];
+  if(l.phone){let ph=l.phone.replace(/\D/g,'');if(ph.startsWith('0'))ph='880'+ph.slice(1);links.push({p:'📱 WhatsApp',url:`https://wa.me/${ph}`,label:`wa.me/${ph}`,c:'#25d366'});links.push({p:'📞 Direct Call',url:`tel:${l.phone}`,label:l.phone,c:'#00e5a0'});}
+  if(l.telegram){const tg=l.telegram.replace('@','');links.push({p:'✈️ Telegram',url:`https://t.me/${tg}`,label:`t.me/${tg}`,c:'#0088cc'});}
+  document.getElementById('contactLinks').innerHTML=links.length?links.map(lk=>`<div class="contact-link-row"><div class="contact-link-info"><div class="contact-link-platform">${lk.p}</div><div class="contact-link-url">${lk.label}</div></div><a href="${lk.url}" target="_blank" class="btn" style="background:${lk.c};color:#fff;font-size:11px;">খুলুন →</a></div>`).join(''):'<div style="color:var(--muted);font-family:\'Tiro Bangla\',serif;font-size:13px;">ফোন বা Telegram তথ্য নেই।</div>';
+  document.getElementById('contactModalOverlay').classList.add('open');
+}
+
+// ======= REMINDER =======
+function openReminderModal(){renderReminderList();document.getElementById('reminderModalOverlay').classList.add('open');}
+
+function renderReminderList(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const wr=leads.filter(l=>l.reminder).sort((a,b)=>new Date(a.reminder)-new Date(b.reminder));
+  const el=document.getElementById('reminderList');
+  if(!wr.length){el.innerHTML='<div style="color:var(--muted);font-family:\'Tiro Bangla\',serif;font-size:12px;padding:10px 0;">কোনো রিমাইন্ডার নেই।</div>';return;}
+  el.innerHTML=wr.map(l=>{const rd=new Date(l.reminder);rd.setHours(0,0,0,0);const diff=Math.round((rd-today)/(864e5));const cls=diff<0?'overdue':diff===0?'today':'';const tl=diff<0?`${Math.abs(diff)} দিন মিস`:diff===0?'আজ ফলোআপ!':diff+' দিন পরে';return`<div class="reminder-item ${cls}"><div style="font-size:18px;">${diff<0?'🔴':diff===0?'🟡':'🟢'}</div><div class="reminder-info"><div class="reminder-name">${l.name} <span style="font-size:10px;color:var(--muted);">(${l.platform})</span></div><div class="reminder-time">${tl} · ${statusConfig[l.status]?.label}</div></div><button class="btn btn-sm btn-ai" onclick="openAiModal('${l.id}');closeModal('reminderModalOverlay')">🤖</button><button class="reminder-del" onclick="clearReminder('${l.id}')">✕</button></div>`;}).join('');
+}
+
+function clearReminder(id){const l=leads.find(x=>x.id===id);if(!l)return;l.reminder='';save();render();renderReminderList();showToast('রিমাইন্ডার সরানো হয়েছে');}
+
+function checkReminders(){const today=new Date();today.setHours(0,0,0,0);const due=leads.filter(l=>l.reminder&&new Date(l.reminder)<=today);if(due.length){document.getElementById('reminderBannerText').textContent=`⏰ ${due.length}টি ফলোআপ বাকি: ${due.map(l=>l.name).join(', ')}`;document.getElementById('reminderBanner').classList.add('show');}}
+
+// ======= MODALS =======
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function closeModalOutside(e,id){if(e.target.id===id)closeModal(id);}
+function openAddModal(){document.getElementById('modalOverlay').classList.add('open');}
+function clearAddForm(){['fName','fHandle','fPhone','fTelegram','fNote','fReminder'].forEach(id=>document.getElementById(id).value='');document.getElementById('fPlatform').value='';document.getElementById('fStatus').value='new';document.getElementById('fScore').value='5';}
+function setNav(el){
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+}
+function showToast(msg,icon='✅'){const t=document.getElementById('toast');document.getElementById('toastMsg').textContent=msg;t.querySelector('span').textContent=icon;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+
+// ======= SETUP SCREEN =======
+function completeSetup(){
+  const val=document.getElementById('setupKeyInput').value.trim();
+  const err=document.getElementById('setupError');
+  err.style.display='none';
+  if(!val){
+    err.textContent='⚠️ API Key লিখুন তারপর সেভ করুন';
+    err.style.display='block'; return;
+  }
+  if(!val.startsWith('sk-ant-')){
+    err.textContent='❌ ভুল Key — sk-ant- দিয়ে শুরু হওয়া উচিত';
+    err.style.display='block'; return;
+  }
+  saveApiKey(val);
+  document.getElementById('setupScreen').style.display='none';
+  showToast('✅ API Key সেভ হয়েছে! এখন সব AI ফিচার চালু।');
+}
+
+function skipSetup(){
+  document.getElementById('setupScreen').style.display='none';
+  return false;
+}
+
+// ======= DEMO =======
+function loadDemo(){
+  if(leads.length>0)return;
+  const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+  const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+  leads=[
+    {id:'1',name:'রাহেলা বেগম',handle:'@rahela_beg',platform:'Facebook',status:'interested',score:8,phone:'01712345678',telegram:'@rahela_t',reminder:tomorrow.toISOString().split('T')[0],note:'ফ্রিল্যান্সিং শিখতে চান',source:'manual',ts:Date.now()-86400000},
+    {id:'2',name:'মোঃ সাইফুল ইসলাম',handle:'@saiful_online',platform:'Facebook',status:'new',score:9,phone:'',telegram:'',reminder:'',note:'পার্টটাইম কাজ খুঁজছেন, মাসে ৫-১০ হাজার চান',source:'ai',ts:Date.now()-3600000},
+    {id:'3',name:'তামান্না আক্তার',handle:'@tamanna99',platform:'Telegram',status:'contacted',score:7,phone:'01898765432',telegram:'@tamanna99',reminder:yesterday.toISOString().split('T')[0],note:'অনলাইন ইনকামে সন্দেহ আছে, কিন্তু আগ্রহী',source:'ai',ts:Date.now()-7200000},
+    {id:'4',name:'নাজমুল হাসান',handle:'@nazmul_bd',platform:'Facebook',status:'converted',score:9,phone:'01611223344',telegram:'',reminder:'',note:'কনভার্টেড, ৩ জন রেফার করেছেন',source:'manual',ts:Date.now()-172800000},
+  ];
+  activities=[
+    {text:'🔍 AI বিশ্লেষণ — ৩টি সম্ভাব্য লিড পাওয়া গেছে',icon:'🔍',color:'#667eea',ts:Date.now()-3600000},
+    {text:'📘 <strong>রাহেলা বেগম</strong> — Facebook লিড যোগ',icon:'📘',color:'#1877f2',ts:Date.now()-86400000},
+    {text:'✅ <strong>নাজমুল হাসান</strong> — কনভার্টেড!',icon:'✅',color:'#00e5a0',ts:Date.now()-172800000},
+  ];
+  save();
+}
+
+// INIT
+loadDemo();
+checkReminders();
+render();
+// Show setup screen only if no API key saved
+if(!getApiKey()){
+  document.getElementById('setupScreen').style.display='flex';
+} else {
+  document.getElementById('setupScreen').style.display='none';
+}
+// Enter key submits setup
+document.getElementById('setupKeyInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter') completeSetup();
+});
+</script>
+</body>
+</html>
